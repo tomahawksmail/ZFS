@@ -17,11 +17,14 @@ mkfile 50m disk4
 Работа с пулом ZFS #
 Теперь создадим простой пул без избыточности, затем проверим его размер и использование.
 
-- zpool create myzfs /disk1 /disk2
-- zpool list
-
+```sh
+zpool create myzfs /disk1 /disk2
+zpool list
+ 
 NAME          SIZE    USED   AVAIL    CAP  HEALTH     ALTROOT
 myzfs         191M     94K    191M     0%  ONLINE     -
+
+```
 Созданы пул автоматически монтируется в каталог /myzfs. Посмотрим более детальную информацию о нашем хранилище.
 
 zpool status -v
