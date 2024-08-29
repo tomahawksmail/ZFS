@@ -27,6 +27,7 @@ myzfs         191M     94K    191M     0%  ONLINE     -
 ```
 Созданы пул автоматически монтируется в каталог /myzfs. Посмотрим более детальную информацию о нашем хранилище.
 
+```sh
 zpool status -v
 
   pool: myzfs
@@ -39,23 +40,32 @@ config:
           /disk2    ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Из вывода видно, что в пул включены два диска. Пул без избыточности (не mirror и не RAIDZ).
 
 Теперь попробуем удалить только что созданный пул. Должны же мы это уметь.
 
+```sh
 zpool destroy myzfs
 zpool list
 
 no pools available
+```
+
 Попробуем снова создать пул типа MIRROR (зеркало), но на этот раз попытаемся включить в него диски разного размера. Zpool не даст нам этого сделать. Чтобы безоговорочно создать такой пул, используйте опцию -f, но в этом случае помните — размер зеркала будет равен объему наименьшего диска.
 
+```sh
 zpool create myzfs mirror /disk1 /disk4
 
 invalid vdev specification
 use '-f' to override the following errors:
 mirror contains devices of different sizes
+```
+
 Создать зеркалируемое (MIRROR) хранилище можно на двух и более устройствах. Сколько устройств в пуле типа MIRROR — столько у нас есть одинаковых копий данных.
 
+```sh
 zpool create myzfs mirror /disk1 /disk2 /disk3
 zpool list
 NAME          SIZE    USED   AVAIL    CAP  HEALTH     ALTROOT
@@ -75,6 +85,8 @@ config:
             /disk3  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Вместо зеркалирования можно использовать массивы RAID. Для этого необходимо создавать пул типа raidz вместо mirror. Подробнее в хендбуке.
 
 Давайте теперь исключим один из дисков из пула. Так как этот диск относится к зеркалу (MIRROR), то при его исключении никаких проблем не возникает.
