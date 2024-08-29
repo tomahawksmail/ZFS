@@ -91,6 +91,7 @@ errors: No known data errors
 
 Давайте теперь исключим один из дисков из пула. Так как этот диск относится к зеркалу (MIRROR), то при его исключении никаких проблем не возникает.
 
+```sh
 zpool detach myzfs /disk3
 zpool status -v
 
@@ -106,8 +107,10 @@ config:
             /disk2  ONLINE       0     0     0
 
 errors: No known data errors
+```
 Теперь давайте добавим к пулу новый диск. Если пул не был зеркальным, то он им станет после добавления нового диска.
 
+```sh
 zpool attach myzfs /disk1 /disk3
 zpool status -v
 
@@ -124,15 +127,21 @@ config:
             /disk3  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 А что будет, если попытаемся удалить, а не исключить устройство из пула? Zpool сообщит нам о том, что устройство не может быть удалено. Для начала его нужно отключить.
 
+```sh
 zpool remove myzfs /disk3
 
 cannot remove /disk3: only inactive hot spares can be removed
 
 zpool detach myzfs /disk3
+```
+
 Теперь давайте попробуем добавить диск горячей замены (hot spare) к нашему пулу.
 
+```sh
 zpool add myzfs spare /disk3
 zpool status -v
 
@@ -150,8 +159,11 @@ config:
           /disk3    AVAIL   
 
 errors: No known data errors
+```
+
 А теперь удалим его из пула.
 
+```sh
 zpool remove myzfs /disk3
 zpool status -v
 
@@ -167,8 +179,11 @@ config:
             /disk2  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Теперь попробуем отключить один из дисков. Пока диск отключен, на него не будет производиться запись и с него не будет производиться чтение. Если использовать параметр -t, то при перезагрузке сервера диск вернется в состояние онлайн автоматически.
 
+```sh
 zpool offline myzfs /disk1
 zpool status -v
 
@@ -189,10 +204,13 @@ config:
             /disk2  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Обратите внимание на состояние пула: DEGRADED
 
 Теперь включим этот диск.
 
+```sh
 zpool online myzfs /disk1
 zpool status -v
 
@@ -208,10 +226,13 @@ config:
             /disk2  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Состояние пула снова ONLINE.
 
 В данный момент в нашем пуле два диска: disc1 и disc2. Также в системе имеется диск disc3, но он не подключен к пулу. Предположим, что disc1 вышел из строя и его нужно заменить на disc3.
 
+```sh
 zpool replace myzfs /disk1 /disk3
 zpool status -v
 
@@ -227,28 +248,40 @@ config:
             /disk2  ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Периодически для исправления ошибок необходимо выполнять процедуру чистки (scrubbing) для пулов типа MIRROR или RAID-Z. Данная процедура находит ошибки в контрольных суммах и исправляет их. Также восстанавливаются сбойные блоки.
 
 Данная операция слишком ресурсоемка! Следует выполнять ее только во время наименьшей нагрузки на пул.
 
+```sh
 zpool scrub myzfs
+```
+
 Если необходимо перенести пул в другую систему, то его необходимо сначала экспортировать.
 
+```sh
 zpool export myzfs
 pool list
 
 no pools available
+```
+
 А затем импортировать в новой системе.
 
 Если ключ -d не указать, то команда ищет /dev/dsk. Так как в данном примере мы используем файлы, необходимо указать директорию с файлами используемыми хранилищем.
 
+```sh
 zpool import -d / myzfs
 zpool list
 
 NAME          SIZE    USED   AVAIL    CAP  HEALTH     ALTROOT
 myzfs        95.5M    114K   95.4M     0%  ONLINE     -
+```
+
 Обновление версии пула. Показать версию используемого пула. Флаг -v показывает возможности, поддерживаемые данным пулом. Используйте флаг -a, чтобы обновить все доступные пулы до новейшей из них версии. Обновленные пулы больше не будут доступны из систем, на которых работают более старые версии.
 
+```sh
 zpool upgrade
 This system is currently running ZFS pool version 8.
 
@@ -277,8 +310,12 @@ releases, see:
 http://www.opensolaris.org/os/community/zfs/version/N
 
 Where 'N' is the version number.
+```
+
+
 Если нужно получить статистику по операциям ввода/вывода пулов, выполняем команду.
 
+```sh
 zpool iostat 5
                capacity     operations    bandwidth 
 pool         used  avail   read  write   read  write
@@ -286,10 +323,13 @@ pool         used  avail   read  write   read  write
 myzfs        112K  95.4M      0      4     26  11.4K
 myzfs        112K  95.4M      0      0      0      0
 myzfs        112K  95.4M      0      0      0      0
-Работа с файловой и другими системами ZFS #
-Файловая система #
+```
+
+# Работа с файловой и другими системами ZFS
+## Файловая система 
 Создадим файловую систему в нашем пуле. Затем проверим автомонтирование новой файловой системы.
 
+```sh
 zfs create myzfs/colin
 df -h
 
@@ -303,19 +343,25 @@ zfs list
 NAME          USED  AVAIL  REFER  MOUNTPOINT
 myzfs         139K  63.4M    19K  /myzfs
 myzfs/colin    18K  63.4M    18K  /myzfs/colin
+```
+
 В данный момент в нашем пуле имеется одно зеркало, в которое входят два диска: disc2 и disc3.
 
 Давайте попробуем расширить наш пул. Попытаемся добавить к нему disc1
 
+```sh
 zpool add myzfs /disk1
 
 invalid vdev specification
 use '-f' to override the following errors:
 mismatched replication level: pool uses mirror and new vdev is file
+```
+
 Попытка добавления не удалась, т.к. она неоднозначно и при добавлении диска к существующему зеркалу необходимо указать дополнительно один из существующих в этом зеркале дисков, либо добавить минимум два диска для формирования нового зеркала, которое будет входить в данный пул.
 
 Добавим к пулу новое зеркало, состоящее из дисков: disc1 и disc5
 
+```sh
 zpool add myzfs mirror /disk1 /disk5
 zpool status -v
 
@@ -334,8 +380,11 @@ config:
             /disk5   ONLINE       0     0     0
 
 errors: No known data errors
+```
+
 Добавим теперь к пулу еще одну файловую систему и посмотрим, как это отразится на размере файловых систем, входящих в пул.
 
+```sh
 zfs create myzfs/colin2
 zfs list
 
@@ -343,12 +392,15 @@ NAME           USED  AVAIL  REFER  MOUNTPOINT
 myzfs          172K   159M    21K  /myzfs
 myzfs/colin     18K   159M    18K  /myzfs/colin
 myzfs/colin2    18K   159M    18K  /myzfs/colin2
+```
+
 Обе файловые системы, входящие в пул, по объему равны всему пулу. В этом заключается одно из преимуществ системы ZFS — по умолчанию нет никакого ограничения на файловые системы.
 
 Чтобы явно управлять объемом файловых систем, можно прибегнуть к резервированию — выделению гарантированного объема для файловой системы, либо квотированию — ограничению файловой системы по максимальному объему.
 
 Давайте зарезервируем для файловой системы /myzfs/colin место в пуле, равное 20 Мб. Остальные файловые системы, заполняя пул, в любом случае оставят для этой файловой системы 20 Мб места.
 
+```sh
 zfs set reservation=20m myzfs/colin
 zfs list -o reservation
 
@@ -356,16 +408,22 @@ RESERV
   none
    20M
   none
+```
+  
 Теперь для файловой системы /myzfs/colin2 установим квоту в 20 Мб. Это означает, что данная файловая система не сможет занять в пуле более 20 Мб, даже если пул будет полностью свободным.
 
+```sh
 zfs set quota=20m myzfs/colin2
 zfs list -o quota myzfs/colin myzfs/colin2
 
 QUOTA
  none
   20M
+```
+
 Также для файловой системы /myzfs/colin2 включим сжатие. Сжатие достаточно эффективно работает на уровне ZFS практически без потерь производительности (конечно же, при условии, что производительности сервера достаточно). Вместо compression=on можно использовать compression=gzip.
 
+```sh
 zfs set compression=on myzfs/colin2
 zfs list -o compression
 
@@ -373,28 +431,40 @@ COMPRESS
      off
      off
       on
+```
+
 Чтобы сделать файловую систему доступной по протоколу NFS, достаточно выполнить одну команду. Причем после перезагрузки сервера доступ к файловой системе утерян не будет. Никаких дополнительных настроек операционной системы производить не нужно.
 
+```sh
 zfs set sharenfs=on myzfs/colin2
 zfs get sharenfs myzfs/colin2 
 
 NAME           PROPERTY  VALUE     SOURCE
 myzfs/colin2   sharenfs  on        local
+```
+
 Точно так же в одну команду ресурс можно сделать доступным по протоколу SMB. Что пользователям ОС Windows наверняка пригодится.
 
+```sh
 zfs set sharesmb=on myzfs/colin2
 zfs get sharesmb myzfs/colin2
 
 NAME           PROPERTY  VALUE     SOURCE
 myzfs/colin2   sharesmb  on        local
+```
+
 Для повышения надежности (если у вас обычный пул, без избыточности), можно использовать следующую опцию файловой системы.
 
+```sh
 zfs set copies=2 myzfs/colin2
+```
+
 Теперь в файловой системе будет храниться по две копии каждого блока. Это имеет смысл, если пул без избыточности (mirror / raidz).
 
-Snapshots (снепшоты или снимки состояния) #
+# Snapshots (снепшоты или снимки состояния)
 Создать снепшот файловой системы очень просто. Давайте создадим снепшот для файловой системы myzfs/colin и назовем его test.
 
+```sh
 zfs snapshot myzfs/colin@test
 zfs list
 
@@ -403,14 +473,23 @@ myzfs             20.2M   139M    21K  /myzfs
 myzfs/colin         18K   159M    18K  /myzfs/colin
 myzfs/colin@test      0      -    18K  -
 myzfs/colin2        18K  20.0M    18K  /myzfs/colin2
+```
+
 Если появится необходимость отката к снепшоту, достаточно выполнить одну команду.
 
+```sh
 zfs rollback myzfs/colin@test
+```
+
 Снэпшот можно подмониторовать, как обычно. Например так.
 
+```sh
 mount -t zfs myzfs/colin@test /mnt
+```
+
 Даже можно клонировать файловую системы из снепшота в новую файловую систему.
 
+```sh
 zfs clone myzfs/colin@test myzfs/colin3
 zfs list
 
@@ -420,10 +499,13 @@ myzfs/colin         18K   159M    18K  /myzfs/colin
 myzfs/colin@test      0      -    18K  -
 myzfs/colin2        18K  20.0M    18K  /myzfs/colin2
 myzfs/colin3          0   139M    18K  /myzfs/colin3
+```
+
 Теперь давайте удалим наши файловые системы /myzfs/colin и /myzfs/colin2
 
 Сперва удалим пустую файловую систему /myzfs/colin2
 
+```sh
 zfs destroy myzfs/colin2
 zfs list
 
@@ -432,17 +514,23 @@ myzfs             20.1M   139M    22K  /myzfs
 myzfs/colin         18K   159M    18K  /myzfs/colin
 myzfs/colin@test      0      -    18K  -
 myzfs/colin3          0   139M    18K  /myzfs/colin3
+```
+
 Файловая система удалилась без проблем. Теперь удалим файловую систему, для которой существует снепшот.
 
+```sh
 zfs destroy myzfs/colin 
 
 cannot destroy 'myzfs/colin': filesystem has children
 use '-r' to destroy the following datasets:
 myzfs/colin@test
+```
+
 Удаление невозможно, т.к. у файловой системы имеется дочерний объект. Можно воспользоваться параметром -r чтобы удалить файловую систему вместе со всеми дочерними объектами рекурсивно.
 
 Мы можем отключить снепшот от /myzfs/colin и оставить его дочерним только для /myzfs/colin3
 
+```sh
 zfs promote myzfs/colin3
 zfs list
 
@@ -460,10 +548,13 @@ NAME                USED  AVAIL  REFER  MOUNTPOINT
 myzfs               147K   159M    21K  /myzfs
 myzfs/colin3         18K   159M    18K  /myzfs/colin3
 myzfs/colin3@test      0      -    18K  -
+```
+
 Теперь сделанный ранее снепшот для /myzfs/colin стал дочерним объектом /myzfs/colin3. Таким образом у файловой системы /myzfs/colin больше нет дочерних объектов и ее можно без труда разобрать (удалить).
 
 Если вдруг понадобиться переименовать ранее созданную файловую систему или снепшот, то можно воспользоваться следующими командами.
 
+```sh
 zfs rename myzfs/colin3 myzfs/bob
 zfs list
 
@@ -491,33 +582,48 @@ myzfs              used           146K                   -
 myzfs              available      159M                   -
 myzfs              referenced     20K                    -
 [...]
+```
+
 Если пул нам более не нужен, можем его удалить. Однако, нельзя удалить пул, в котором имеются активные файловые системы.
 
+```sh
 zpool destroy myzfs
 
 cannot destroy 'myzfs': pool is not empty
 use '-f' to force destruction anyway
+```
+
 Чтобы принудительно удалить пул, используйте параметр -f (не выполняйте это сейчас. Пул нам еще понадобится далее)
 
+```sh
 zpool destroy -f myzfs
 zpool status -v
 
 no pools available
+```
+
 Отключить файловую систему от пула можно следующим образом.
 
+```sh
 zfs unmount myzfs/bob
 df -h
 
 myzfs                  159M    20K   159M     1%    /myzfs
+```
+
 Подключить файловую систему к пулу вот так.
 
+```sh
 zfs mount myzfs/bob
 df -h
 
 myzfs                  159M    20K   159M     1%    /myzfs
 myzfs/bob              159M    18K   159M     1%    /myzfs/bob
+```
+
 Снепшот можно сделать и на удаленный ресурс (или другое место в локальной системе).
 
+```sh
 zfs send myzfs/bob@newtest | ssh localhost zfs receive myzfs/backup
 zfs list
 
@@ -527,10 +633,13 @@ myzfs/backup            18K   159M    18K  /myzfs/backup
 myzfs/backup@newtest      0      -    18K  -
 myzfs/bob               18K   159M    18K  /myzfs/bob
 myzfs/bob@newtest         0      -    18K  -
+```
+
 В данном случае снепшот передан zfs receive на локальном узле (в демонстрационных целях). В реальной ситуации таким образом можно сделать снепшот на другой узел сети.
 
 Zpool ведет собственную историю всех команд. Посмотреть историю можно следующим образом.
 
+```sh
 zpool history
 
 History for 'myzfs':
@@ -561,6 +670,4 @@ History for 'myzfs':
 2007-09-11.15:42:57 zfs destroy myzfs/colin
 2007-09-11.15:43:23 zfs rename myzfs/bob@test myzfs/bob@newtest
 2007-09-11.15:44:30 zfs receive myzfs/backup
-Ну вот. Основные команды для работы с пулами ZFS усвоены.
-
-Теперь можно удалить сам пул и файлы. Они нам больше не пригодятся.
+```
